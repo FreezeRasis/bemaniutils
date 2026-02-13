@@ -1,8 +1,8 @@
 import random
-from sqlalchemy import Table, Column, UniqueConstraint  # type: ignore
-from sqlalchemy.types import String, Integer, JSON  # type: ignore
-from sqlalchemy.dialects.mysql import BIGINT as BigInteger  # type: ignore
-from sqlalchemy.exc import IntegrityError  # type: ignore
+from sqlalchemy import Table, Column, UniqueConstraint
+from sqlalchemy.types import String, Integer, JSON
+from sqlalchemy.dialects.mysql import BIGINT as BigInteger
+from sqlalchemy.exc import IntegrityError
 from typing import Optional, Dict, List, Tuple, Any
 from typing_extensions import Final
 from passlib.hash import pbkdf2_sha512  # type: ignore
@@ -123,9 +123,7 @@ time_based_achievement = Table(
     Column("type", String(64), nullable=False),
     Column("timestamp", Integer, nullable=False, index=True),
     Column("data", JSON, nullable=False),
-    UniqueConstraint(
-        "refid", "id", "type", "timestamp", name="refid_id_type_timestamp"
-    ),
+    UniqueConstraint("refid", "id", "type", "timestamp", name="refid_id_type_timestamp"),
     mysql_charset="utf8mb4",
 )
 
@@ -196,7 +194,7 @@ class UserData(BaseData):
             # Couldn't find a user with this card
             return None
 
-        result = cursor.fetchone()
+        result = cursor.mappings().fetchone()  # type: ignore
         return UserID(result["userid"])
 
     def from_username(self, username: str) -> Optional[UserID]:
@@ -215,12 +213,10 @@ class UserData(BaseData):
             # Couldn't find this username
             return None
 
-        result = cursor.fetchone()
+        result = cursor.mappings().fetchone()  # type: ignore
         return UserID(result["id"])
 
-    def from_refid(
-        self, game: GameConstants, version: int, refid: str
-    ) -> Optional[UserID]:
+    def from_refid(self, game: GameConstants, version: int, refid: str) -> Optional[UserID]:
         """
         Given a generated RefID, look up a user ID.
 
@@ -237,19 +233,15 @@ class UserData(BaseData):
         """
         # First, look up the user account
         sql = "SELECT userid FROM refid WHERE game = :game AND version = :version AND refid = :refid"
-        cursor = self.execute(
-            sql, {"game": game.value, "version": version, "refid": refid}
-        )
+        cursor = self.execute(sql, {"game": game.value, "version": version, "refid": refid})
         if cursor.rowcount != 1:
             # Couldn't find a user with this refid
             return None
 
-        result = cursor.fetchone()
+        result = cursor.mappings().fetchone()  # type: ignore
         return UserID(result["userid"])
 
-    def from_extid(
-        self, game: GameConstants, version: int, extid: int
-    ) -> Optional[UserID]:
+    def from_extid(self, game: GameConstants, version: int, extid: int) -> Optional[UserID]:
         """
         Given a generated ExtID, look up a user ID.
 
@@ -271,7 +263,7 @@ class UserData(BaseData):
             # Couldn't find a user with this refid
             return None
 
-        result = cursor.fetchone()
+        result = cursor.mappings().fetchone()  # type: ignore
         return UserID(result["userid"])
 
     def from_session(self, session: str) -> Optional[UserID]:
@@ -305,7 +297,7 @@ class UserData(BaseData):
             # User doesn't exist, but we have a reference?
             return None
 
-        result = cursor.fetchone()
+        result = cursor.mappings().fetchone()  # type: ignore
         return User(userid, result["username"], result["email"], result["admin"] == 1)
 
     def get_all_users(self) -> List[User]:
@@ -324,7 +316,7 @@ class UserData(BaseData):
                 result["email"],
                 result["admin"] == 1,
             )
-            for result in cursor
+            for result in cursor.mappings()
         ]
 
     def get_all_usernames(self) -> List[str]:
@@ -339,7 +331,7 @@ class UserData(BaseData):
         """
         sql = "SELECT username FROM user WHERE username is not null"
         cursor = self.execute(sql)
-        return [res["username"] for res in cursor]
+        return [res["username"] for res in cursor.mappings()]
 
     def get_all_cards(self) -> List[Tuple[str, UserID]]:
         """
@@ -350,7 +342,7 @@ class UserData(BaseData):
         """
         sql = "SELECT id, userid FROM card"
         cursor = self.execute(sql)
-        return [(str(res["id"]).upper(), UserID(res["userid"])) for res in cursor]
+        return [(str(res["id"]).upper(), UserID(res["userid"])) for res in cursor.mappings()]
 
     def get_cards(self, userid: UserID) -> List[str]:
         """
@@ -364,7 +356,7 @@ class UserData(BaseData):
         """
         sql = "SELECT id FROM card WHERE userid = :userid"
         cursor = self.execute(sql, {"userid": userid})
-        return [str(res["id"]).upper() for res in cursor]
+        return [str(res["id"]).upper() for res in cursor.mappings()]
 
     def add_card(self, userid: UserID, cardid: str) -> None:
         """
@@ -378,9 +370,7 @@ class UserData(BaseData):
             cardid - 16-digit card ID to add.
         """
         if RemoteUser.is_remote(userid):
-            raise AccountCreationException(
-                "Should not add local cards to remote users!"
-            )
+            raise AccountCreationException("Should not add local cards to remote users!")
         sql = "INSERT INTO card (userid, id) VALUES (:userid, :cardid)"
         self.execute(sql, {"userid": userid, "cardid": cardid})
 
@@ -447,7 +437,7 @@ class UserData(BaseData):
             # User doesn't exist, but we have a reference?
             return False
 
-        result = cursor.fetchone()
+        result = cursor.mappings().fetchone()  # type: ignore
         return pin == result["pin"]
 
     def update_pin(self, userid: UserID, pin: str) -> None:
@@ -478,7 +468,7 @@ class UserData(BaseData):
             # User doesn't exist, but we have a reference?
             return False
 
-        result = cursor.fetchone()
+        result = cursor.mappings().fetchone()  # type: ignore
         passhash = result["password"]
 
         try:
@@ -499,9 +489,7 @@ class UserData(BaseData):
         sql = "UPDATE user SET password = :hash WHERE id = :userid"
         self.execute(sql, {"hash": passhash, "userid": userid})
 
-    def get_profile(
-        self, game: GameConstants, version: int, userid: UserID
-    ) -> Optional[Profile]:
+    def get_profile(self, game: GameConstants, version: int, userid: UserID) -> Optional[Profile]:
         """
         Given a game/version/userid, look up the associated profile.
 
@@ -524,14 +512,12 @@ class UserData(BaseData):
                 extid.game = refid.game AND
                 profile.refid = refid.refid
         """
-        cursor = self.execute(
-            sql, {"userid": userid, "game": game.value, "version": version}
-        )
+        cursor = self.execute(sql, {"userid": userid, "game": game.value, "version": version})
         if cursor.rowcount != 1:
             # Profile doesn't exist
             return None
 
-        result = cursor.fetchone()
+        result = cursor.mappings().fetchone()  # type: ignore
         return Profile(
             game,
             version,
@@ -540,9 +526,7 @@ class UserData(BaseData):
             self.deserialize(result["data"]),
         )
 
-    def get_any_profile(
-        self, game: GameConstants, version: int, userid: UserID
-    ) -> Optional[Profile]:
+    def get_any_profile(self, game: GameConstants, version: int, userid: UserID) -> Optional[Profile]:
         """
         Given a game/version/userid, look up the associated profile. If the profile for that version
         doesn't exist, try another profile, failing only if there is no profile for any version of
@@ -593,7 +577,7 @@ class UserData(BaseData):
         cursor = self.execute(sql, {"game": game.value, "userids": userids})
         profilever: Dict[UserID, int] = {}
 
-        for result in cursor:
+        for result in cursor.mappings():
             tuid = UserID(result["userid"])
             tver = result["version"]
 
@@ -613,16 +597,12 @@ class UserData(BaseData):
         return [
             (
                 uid,
-                self.get_profile(game, profilever[uid], uid)
-                if uid in profilever
-                else None,
+                self.get_profile(game, profilever[uid], uid) if uid in profilever else None,
             )
             for uid in userids
         ]
 
-    def get_games_played(
-        self, userid: UserID, game: Optional[GameConstants] = None
-    ) -> List[Tuple[GameConstants, int]]:
+    def get_games_played(self, userid: UserID, game: Optional[GameConstants] = None) -> List[Tuple[GameConstants, int]]:
         """
         Given a user ID, look up all game/version combos this user has played.
 
@@ -646,11 +626,9 @@ class UserData(BaseData):
             vals["game"] = game.value
 
         cursor = self.execute(sql, vals)
-        return [(GameConstants(result["game"]), result["version"]) for result in cursor]
+        return [(GameConstants(result["game"]), result["version"]) for result in cursor.mappings()]
 
-    def get_all_profiles(
-        self, game: GameConstants, version: int
-    ) -> List[Tuple[UserID, Profile]]:
+    def get_all_profiles(self, game: GameConstants, version: int) -> List[Tuple[UserID, Profile]]:
         """
         Given a game/version, look up all user profiles for that game.
 
@@ -684,7 +662,7 @@ class UserData(BaseData):
                     self.deserialize(result["data"]),
                 ),
             )
-            for result in cursor
+            for result in cursor.mappings()
         ]
 
     def get_all_players(self, game: GameConstants, version: int) -> List[UserID]:
@@ -704,7 +682,7 @@ class UserData(BaseData):
         """
         cursor = self.execute(sql, {"game": game.value, "version": version})
 
-        return [UserID(result["userid"]) for result in cursor]
+        return [UserID(result["userid"]) for result in cursor.mappings()]
 
     def get_all_achievements(
         self,
@@ -754,12 +732,10 @@ class UserData(BaseData):
                     self.deserialize(result["data"]),
                 ),
             )
-            for result in cursor
+            for result in cursor.mappings()
         ]
 
-    def put_profile(
-        self, game: GameConstants, version: int, userid: UserID, profile: Profile
-    ) -> None:
+    def put_profile(self, game: GameConstants, version: int, userid: UserID, profile: Profile) -> None:
         """
         Given a game/version/userid, save an associated profile.
 
@@ -827,19 +803,15 @@ class UserData(BaseData):
         """
         refid = self.get_refid(game, version, userid)
         sql = "SELECT data FROM achievement WHERE refid = :refid AND id = :id AND type = :type"
-        cursor = self.execute(
-            sql, {"refid": refid, "id": achievementid, "type": achievementtype}
-        )
+        cursor = self.execute(sql, {"refid": refid, "id": achievementid, "type": achievementtype})
         if cursor.rowcount != 1:
             # score doesn't exist
             return None
 
-        result = cursor.fetchone()
+        result = cursor.mappings().fetchone()  # type: ignore
         return ValidatedDict(self.deserialize(result["data"]))
 
-    def get_achievements(
-        self, game: GameConstants, version: int, userid: UserID
-    ) -> List[Achievement]:
+    def get_achievements(self, game: GameConstants, version: int, userid: UserID) -> List[Achievement]:
         """
         Given a game/version/userid, find all achievements
 
@@ -862,7 +834,7 @@ class UserData(BaseData):
                 None,
                 self.deserialize(result["data"]),
             )
-            for result in cursor
+            for result in cursor.mappings()
         ]
 
     def put_achievement(
@@ -928,9 +900,7 @@ class UserData(BaseData):
             DELETE FROM achievement
             WHERE refid = :refid AND id = :id AND type = :type
         """
-        self.execute(
-            sql, {"refid": refid, "id": achievementid, "type": achievementtype}
-        )
+        self.execute(sql, {"refid": refid, "id": achievementid, "type": achievementtype})
 
     def get_time_based_achievements(
         self,
@@ -975,7 +945,7 @@ class UserData(BaseData):
                 result["timestamp"],
                 self.deserialize(result["data"]),
             )
-            for result in cursor
+            for result in cursor.mappings()
         ]
 
     def put_time_based_achievement(
@@ -1017,9 +987,7 @@ class UserData(BaseData):
             },
         )
 
-    def get_all_time_based_achievements(
-        self, game: GameConstants, version: int
-    ) -> List[Tuple[UserID, Achievement]]:
+    def get_all_time_based_achievements(self, game: GameConstants, version: int) -> List[Tuple[UserID, Achievement]]:
         """
         Given a game/version, find all time-based achievements for all players.
 
@@ -1055,7 +1023,7 @@ class UserData(BaseData):
                     self.deserialize(result["data"]),
                 ),
             )
-            for result in cursor
+            for result in cursor.mappings()
         ]
 
     def get_link(
@@ -1106,12 +1074,10 @@ class UserData(BaseData):
             # score doesn't exist
             return None
 
-        result = cursor.fetchone()
+        result = cursor.mappings().fetchone()  # type: ignore
         return ValidatedDict(self.deserialize(result["data"]))
 
-    def get_links(
-        self, game: GameConstants, version: int, userid: UserID
-    ) -> List[Link]:
+    def get_links(self, game: GameConstants, version: int, userid: UserID) -> List[Link]:
         """
         Given a game/version/userid, find all links between this user and other users
 
@@ -1128,9 +1094,7 @@ class UserData(BaseData):
             FROM link
             WHERE game = :game AND version = :version AND userid = :userid
         """
-        cursor = self.execute(
-            sql, {"game": game.value, "version": version, "userid": userid}
-        )
+        cursor = self.execute(sql, {"game": game.value, "version": version, "userid": userid})
 
         return [
             Link(
@@ -1139,7 +1103,7 @@ class UserData(BaseData):
                 UserID(result["other_userid"]),
                 self.deserialize(result["data"]),
             )
-            for result in cursor
+            for result in cursor.mappings()
         ]
 
     def put_link(
@@ -1232,14 +1196,12 @@ class UserData(BaseData):
         sql = "SELECT balance FROM balance WHERE userid = :userid AND arcadeid = :arcadeid"
         cursor = self.execute(sql, {"userid": userid, "arcadeid": arcadeid})
         if cursor.rowcount == 1:
-            result = cursor.fetchone()
+            result = cursor.mappings().fetchone()  # type: ignore
             return result["balance"]
         else:
             return 0
 
-    def update_balance(
-        self, userid: UserID, arcadeid: ArcadeID, delta: int
-    ) -> Optional[int]:
+    def update_balance(self, userid: UserID, arcadeid: ArcadeID, delta: int) -> Optional[int]:
         """
         Given a user and an arcade ID, update the PASELI balance for that arcade.
 
@@ -1278,11 +1240,9 @@ class UserData(BaseData):
             and returns it, which can be used for creating/looking up a profile in the future.
         """
         sql = "SELECT refid FROM refid WHERE userid = :userid AND game = :game AND version = :version"
-        cursor = self.execute(
-            sql, {"userid": userid, "game": game.value, "version": version}
-        )
+        cursor = self.execute(sql, {"userid": userid, "game": game.value, "version": version})
         if cursor.rowcount == 1:
-            result = cursor.fetchone()
+            result = cursor.mappings().fetchone()  # type: ignore
             return result["refid"]
         else:
             return self.create_refid(game, version, userid)
@@ -1305,7 +1265,7 @@ class UserData(BaseData):
             sql = "SELECT extid FROM extid WHERE userid = :userid AND game = :game"
             cursor = self.execute(sql, {"userid": userid, "game": game.value})
             if cursor.rowcount == 1:
-                result = cursor.fetchone()
+                result = cursor.mappings().fetchone()  # type: ignore
                 return result["extid"]
             else:
                 return None
@@ -1319,9 +1279,7 @@ class UserData(BaseData):
             if extid is not None:
                 return extid
             else:
-                raise AccountCreationException(
-                    "Failed to cteate a new refid/extid pair!"
-                )
+                raise AccountCreationException("Failed to cteate a new refid/extid pair!")
 
     def create_session(self, userid: UserID, expiration: int = (30 * 86400)) -> str:
         """
@@ -1376,18 +1334,14 @@ class UserData(BaseData):
             VALUES (:game, :extid, :userid)
         """
         try:
-            cursor = self.execute(
-                sql, {"game": game.value, "extid": extid, "userid": userid}
-            )
+            cursor = self.execute(sql, {"game": game.value, "extid": extid, "userid": userid})
         except IntegrityError:
             # User already has an ExtID for this game series
             pass
 
         # Create a new refid that is unique
         while True:
-            refid = "".join(
-                random.choice("0123456789ABCDEF") for _ in range(UserData.REF_ID_LENGTH)
-            )
+            refid = "".join(random.choice("0123456789ABCDEF") for _ in range(UserData.REF_ID_LENGTH))
             sql = "SELECT refid FROM refid WHERE refid = :refid"
             cursor = self.execute(sql, {"refid": refid})
             if cursor.rowcount == 0:
@@ -1409,19 +1363,15 @@ class UserData(BaseData):
                 },
             )
             if cursor.rowcount != 1:
-                raise AccountCreationException(
-                    "Failed to create and fetch a new refid!"
-                )
+                raise AccountCreationException("Failed to create and fetch a new refid!")
             return refid
         except IntegrityError:
             # We maybe lost the race? Look up the ID from another creation. Don't call get_refid
             # because it calls us, so we don't want an infinite loop.
             sql = "SELECT refid FROM refid WHERE userid = :userid AND game = :game AND version = :version"
-            cursor = self.execute(
-                sql, {"userid": userid, "game": game.value, "version": version}
-            )
+            cursor = self.execute(sql, {"userid": userid, "game": game.value, "version": version})
             if cursor.rowcount == 1:
-                result = cursor.fetchone()
+                result = cursor.mappings().fetchone()  # type: ignore
                 return result["refid"]
             # Shouldn't be possible, but here we are
             raise AccountCreationException("Failed to recover lost race refid!")
@@ -1437,6 +1387,10 @@ class UserData(BaseData):
         Returns:
             A User ID if creation was successful, or None otherwise.
         """
+        existing = self.from_cardid(cardid)
+        if existing:
+            return None
+
         # First, create a user account
         sql = "INSERT INTO user (pin, admin) VALUES (:pin, 0)"
         cursor = self.execute(sql, {"pin": pin})

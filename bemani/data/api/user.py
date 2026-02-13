@@ -13,6 +13,11 @@ class GlobalUserData(BaseGlobalData):
         super().__init__(api)
         self.user = user
 
+    def __format_danevo_profile(self, updates: Profile, profile: Profile) -> None:
+        area = profile.get_str("area", "")
+        if area:
+            updates["area"] = area
+
     def __format_ddr_profile(self, updates: Profile, profile: Profile) -> None:
         area = profile.get_int("area", -1)
         if area != -1:
@@ -86,12 +91,12 @@ class GlobalUserData(BaseGlobalData):
             self.__format_reflec_profile(new, profile)
         if profile.game == GameConstants.SDVX:
             self.__format_sdvx_profile(new, profile)
+        if profile.game == GameConstants.DANCE_EVOLUTION:
+            self.__format_danevo_profile(new, profile)
 
         return new
 
-    def __profile_request(
-        self, game: GameConstants, version: int, userid: UserID, exact: bool
-    ) -> Optional[Profile]:
+    def __profile_request(self, game: GameConstants, version: int, userid: UserID, exact: bool) -> Optional[Profile]:
         # First, get or create the extid/refid for this virtual user
         cardid = RemoteUser.userid_to_card(userid)
         refid = self.user.get_refid(game, version, userid)
@@ -134,27 +139,19 @@ class GlobalUserData(BaseGlobalData):
             userid = RemoteUser.card_to_userid(cardid)
         return userid
 
-    def from_refid(
-        self, game: GameConstants, version: int, refid: str
-    ) -> Optional[UserID]:
+    def from_refid(self, game: GameConstants, version: int, refid: str) -> Optional[UserID]:
         return self.user.from_refid(game, version, refid)
 
-    def from_extid(
-        self, game: GameConstants, version: int, extid: int
-    ) -> Optional[UserID]:
+    def from_extid(self, game: GameConstants, version: int, extid: int) -> Optional[UserID]:
         return self.user.from_extid(game, version, extid)
 
-    def get_profile(
-        self, game: GameConstants, version: int, userid: UserID
-    ) -> Optional[Profile]:
+    def get_profile(self, game: GameConstants, version: int, userid: UserID) -> Optional[Profile]:
         if RemoteUser.is_remote(userid):
             return self.__profile_request(game, version, userid, exact=True)
         else:
             return self.user.get_profile(game, version, userid)
 
-    def get_any_profile(
-        self, game: GameConstants, version: int, userid: UserID
-    ) -> Optional[Profile]:
+    def get_any_profile(self, game: GameConstants, version: int, userid: UserID) -> Optional[Profile]:
         if RemoteUser.is_remote(userid):
             return self.__profile_request(game, version, userid, exact=False)
         else:
@@ -175,9 +172,7 @@ class GlobalUserData(BaseGlobalData):
         else:
             # We have to fetch some local profiles and some remote profiles, and then
             # merge them together
-            card_to_userid = {
-                RemoteUser.userid_to_card(userid): userid for userid in remote_ids
-            }
+            card_to_userid = {RemoteUser.userid_to_card(userid): userid for userid in remote_ids}
 
             local_profiles, remote_profiles = Parallel.execute(
                 [
@@ -188,10 +183,7 @@ class GlobalUserData(BaseGlobalData):
                             game,
                             version,
                             APIConstants.ID_TYPE_CARD,
-                            [
-                                RemoteUser.userid_to_card(userid)
-                                for userid in remote_ids
-                            ],
+                            [RemoteUser.userid_to_card(userid) for userid in remote_ids],
                         )
                     ),
                 ]
@@ -235,9 +227,7 @@ class GlobalUserData(BaseGlobalData):
 
             return local_profiles
 
-    def get_all_profiles(
-        self, game: GameConstants, version: int
-    ) -> List[Tuple[UserID, Profile]]:
+    def get_all_profiles(self, game: GameConstants, version: int) -> List[Tuple[UserID, Profile]]:
         # Fetch local and remote profiles, and then merge by adding remote profiles to local
         # profiles when we don't have a profile for that user ID yet.
         local_cards, local_profiles, remote_profiles = Parallel.execute(

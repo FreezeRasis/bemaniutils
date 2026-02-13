@@ -186,9 +186,7 @@ def viewtopscores(musicid: int) -> Response:
     difficulties = [0, 0, 0, 0]
 
     for chart in [0, 1, 2, 3]:
-        details = g.data.local.music.get_song(
-            GameConstants.REFLEC_BEAT, 0, musicid, chart
-        )
+        details = g.data.local.music.get_song(GameConstants.REFLEC_BEAT, 0, musicid, chart)
         if details is not None:
             if name is None:
                 name = details.name
@@ -269,9 +267,7 @@ def viewplayer(userid: UserID) -> Response:
             "playerid": userid,
             "own_profile": userid == g.userID,
             "player": info,
-            "versions": {
-                version: name for (game, version, name) in frontend.all_games()
-            },
+            "versions": {version: name for (game, version, name) in frontend.all_games()},
         },
         {
             "refresh": url_for("reflec_pages.listplayer", userid=userid),
@@ -307,9 +303,7 @@ def viewsettings() -> Response:
         "reflec/settings.react.js",
         {
             "player": info,
-            "versions": {
-                version: name for (game, version, name) in frontend.all_games()
-            },
+            "versions": {version: name for (game, version, name) in frontend.all_games()},
         },
         {
             "updatename": url_for("reflec_pages.updatename"),
@@ -338,15 +332,15 @@ def updatename() -> Dict[str, Any]:
         if (
             re.match(
                 "^["
-                + "\uFF21-\uFF3A"
-                + "\uFF10-\uFF19"  # widetext A-Z
-                + "\uFF0E\u2212\uFF3F\u30FB"  # widetext 0-9
-                + "\uFF06\uFF01\uFF1F\uFF0F"
-                + "\uFF0A\uFF03\u266D\u2605"
-                + "\uFF20\u266A\u2193\u2191"
-                + "\u2192\u2190\uFF08\uFF09"
-                + "\u221E\u25C6\u25CF\u25BC"
-                + "\uFFE5\uFF3E\u2200\uFF05"
+                + "\uff21-\uff3a"
+                + "\uff10-\uff19"  # widetext A-Z
+                + "\uff0e\u2212\uff3f\u30fb"  # widetext 0-9
+                + "\uff06\uff01\uff1f\uff0f"
+                + "\uff0a\uff03\u266d\u2605"
+                + "\uff20\u266a\u2193\u2191"
+                + "\u2192\u2190\uff08\uff09"
+                + "\u221e\u25c6\u25cf\u25bc"
+                + "\uffe5\uff3e\u2200\uff05"
                 + "\u3000"
                 + "]*$",  # widetext space
                 name,
@@ -360,16 +354,16 @@ def updatename() -> Dict[str, Any]:
         if (
             re.match(
                 "^["
-                + "\uFF21-\uFF3A"
-                + "\uFF41-\uFF5A"  # widetext A-Z
-                + "\uFF10-\uFF19"  # widetext a-z
-                + "\uFF0E\u2212\uFF3F\u30FB"  # widetext 0-9
-                + "\uFF06\uFF01\uFF1F\uFF0F"
-                + "\uFF0A\uFF03\u266D\u2605"
-                + "\uFF20\u266A\u2193\u2191"
-                + "\u2192\u2190\uFF08\uFF09"
-                + "\u221E\u25C6\u25CF\u25BC"
-                + "\uFFE5\uFF3E\u2200\uFF05"
+                + "\uff21-\uff3a"
+                + "\uff41-\uff5a"  # widetext A-Z
+                + "\uff10-\uff19"  # widetext a-z
+                + "\uff0e\u2212\uff3f\u30fb"  # widetext 0-9
+                + "\uff06\uff01\uff1f\uff0f"
+                + "\uff0a\uff03\u266d\u2605"
+                + "\uff20\u266a\u2193\u2191"
+                + "\u2192\u2190\uff08\uff09"
+                + "\u221e\u25c6\u25cf\u25bc"
+                + "\uffe5\uff3e\u2200\uff05"
                 + "\u3000"
                 + "]*$",  # widetext space
                 name,
@@ -406,9 +400,7 @@ def viewrivals() -> Response:
             "rivals": rivals,
             "players": playerinfo,
             "versions": {
-                version: name
-                for (game, version, name) in frontend.all_games()
-                if version not in NO_RIVAL_SUPPORT
+                version: name for (game, version, name) in frontend.all_games() if version not in NO_RIVAL_SUPPORT
             },
         },
         {
@@ -472,9 +464,7 @@ def addrival() -> Dict[str, Any]:
     userid = g.userID
 
     # Add this rival link
-    profile = g.data.remote.user.get_profile(
-        GameConstants.REFLEC_BEAT, version, other_userid
-    )
+    profile = g.data.remote.user.get_profile(GameConstants.REFLEC_BEAT, version, other_userid)
     if profile is None:
         raise Exception("Unable to find profile for rival!")
 

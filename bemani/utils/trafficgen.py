@@ -30,6 +30,7 @@ from bemani.client.popn import (
     PopnMusicUsaNekoClient,
     PopnMusicPeaceClient,
     PopnMusicKaimeiClient,
+    PopnMusicUnilabClient,
 )
 from bemani.client.ddr import (
     DDRX2Client,
@@ -58,12 +59,11 @@ from bemani.client.reflec import (
     ReflecBeatVolzza2,
 )
 from bemani.client.bishi import TheStarBishiBashiClient
-from bemani.client.mga.mga import MetalGearArcadeClient
+from bemani.client.mga import MetalGearArcadeClient
+from bemani.client.danevo import DanceEvolutionClient
 
 
-def get_client(
-    proto: ClientProtocol, pcbid: str, game: str, config: Dict[str, Any]
-) -> BaseClient:
+def get_client(proto: ClientProtocol, pcbid: str, game: str, config: Dict[str, Any]) -> BaseClient:
     if game == "pnm-tune-street":
         return PopnMusicTuneStreetClient(
             proto,
@@ -108,6 +108,12 @@ def get_client(
         )
     if game == "pnm-kaimei":
         return PopnMusicKaimeiClient(
+            proto,
+            pcbid,
+            config,
+        )
+    if game == "pnm-unilab":
+        return PopnMusicUnilabClient(
             proto,
             pcbid,
             config,
@@ -310,6 +316,12 @@ def get_client(
             pcbid,
             config,
         )
+    if game == "dance-evolution":
+        return DanceEvolutionClient(
+            proto,
+            pcbid,
+            config,
+        )
 
     raise Exception(f"Unknown game {game}")
 
@@ -369,6 +381,12 @@ def mainloop(
         "pnm-kaimei": {
             "name": "Pop'n Music Kaimei riddles",
             "model": "M39:J:B:A:2022061300",
+            "old_profile_model": "M39:J:B:A",
+            "avs": "2.15.8 r6631",
+        },
+        "pnm-unilab": {
+            "name": "Pop'n Music Unilab",
+            "model": "M39:J:B:A:2024073100",
             "old_profile_model": "M39:J:B:A",
             "avs": "2.15.8 r6631",
         },
@@ -537,6 +555,11 @@ def mainloop(
             "model": "I36:J:A:A:2011092900",
             "avs": None,
         },
+        "dance-evolution": {
+            "name": "Dance Evolution Arcade",
+            "model": "KDM:J:B:A:2016080100",
+            "avs": "2.15.5 r6251",
+        },
     }
     if action == "list":
         for game in sorted([game for game in games]):
@@ -570,9 +593,7 @@ def main() -> None:
     parser = argparse.ArgumentParser(
         description="A utility to generate game-like traffic for testing an eAmusement server."
     )
-    parser.add_argument(
-        "-p", "--port", help="Port to talk to. Defaults to 80", type=int, default=80
-    )
+    parser.add_argument("-p", "--port", help="Port to talk to. Defaults to 80", type=int, default=80)
     parser.add_argument(
         "-a",
         "--address",
@@ -594,9 +615,7 @@ def main() -> None:
         type=str,
         default=None,
     )
-    parser.add_argument(
-        "-l", "--list", help="List all known games and exit.", action="store_true"
-    )
+    parser.add_argument("-l", "--list", help="List all known games and exit.", action="store_true")
     parser.add_argument(
         "-i",
         "--cardid",
@@ -632,6 +651,7 @@ def main() -> None:
         "pnm-24": "pnm-usaneko",
         "pnm-25": "pnm-peace",
         "pnm-26": "pnm-kaimei",
+        "pnm-27": "pnm-unilab",
         "iidx-20": "iidx-tricoro",
         "iidx-21": "iidx-spada",
         "iidx-22": "iidx-pendual",
@@ -662,11 +682,10 @@ def main() -> None:
         "reflec-5": "reflec-volzza",
         "reflec-6": "reflec-volzza2",
         "mga": "metal-gear-arcade",
+        "danevo": "dance-evolution",
     }.get(game, game)
 
-    mainloop(
-        args.address, args.port, args.config, action, game, args.cardid, args.verbose
-    )
+    mainloop(args.address, args.port, args.config, action, game, args.cardid, args.verbose)
 
 
 if __name__ == "__main__":

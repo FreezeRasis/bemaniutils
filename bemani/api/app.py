@@ -32,8 +32,6 @@ def jsonify_response(data: Dict[str, Any], code: int = 200) -> Response:
 
 @app.before_request
 def before_request() -> None:
-    global config
-
     g.config = config
     g.data = Data(config)
     g.authorized = False
@@ -46,7 +44,7 @@ def before_request() -> None:
             authtype = None
             authtoken = None
 
-        if authtype.lower() == "token":
+        if authtype is not None and authtoken is not None and authtype.lower() == "token":
             g.authorized = g.data.local.api.validate_client(authtoken)
 
 
@@ -91,9 +89,7 @@ def jsonify(func: Callable) -> Callable:
 
 @app.errorhandler(Exception)
 def server_exception(exception: Any) -> Response:
-    stack = "".join(
-        traceback.format_exception(type(exception), exception, exception.__traceback__)
-    )
+    stack = "".join(traceback.format_exception(type(exception), exception, exception.__traceback__))
     print(stack)
     try:
         g.data.local.network.put_event(
@@ -215,6 +211,7 @@ def lookup(protoversion: str, requestgame: str, requestversion: str) -> Dict[str
         ("popnmusic", GameConstants.POPN_MUSIC),
         ("reflecbeat", GameConstants.REFLEC_BEAT),
         ("soundvoltex", GameConstants.SDVX),
+        ("danceevolution", GameConstants.DANCE_EVOLUTION),
     ]:
         if constant in g.config.support:
             gamemapping[gameid] = constant
@@ -272,6 +269,7 @@ def lookup(protoversion: str, requestgame: str, requestversion: str) -> Dict[str
                 "24": VersionConstants.POPN_MUSIC_USANEKO,
                 "25": VersionConstants.POPN_MUSIC_PEACE,
                 "26": VersionConstants.POPN_MUSIC_KAIMEI_RIDDLES,
+                "27": VersionConstants.POPN_MUSIC_UNILAB,
             },
             GameConstants.REFLEC_BEAT: {
                 "1": VersionConstants.REFLEC_BEAT,
@@ -295,6 +293,9 @@ def lookup(protoversion: str, requestgame: str, requestversion: str) -> Dict[str
                 "2": VersionConstants.SDVX_INFINITE_INFECTION,
                 "3": VersionConstants.SDVX_GRAVITY_WARS,
                 "4": VersionConstants.SDVX_HEAVENLY_HAVEN,
+            },
+            GameConstants.DANCE_EVOLUTION: {
+                "1": VersionConstants.DANCE_EVOLUTION,
             },
         }
         .get(game, {})

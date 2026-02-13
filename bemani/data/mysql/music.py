@@ -1,7 +1,7 @@
-from sqlalchemy import Table, Column, UniqueConstraint  # type: ignore
-from sqlalchemy.exc import IntegrityError  # type: ignore
-from sqlalchemy.types import String, Integer, JSON  # type: ignore
-from sqlalchemy.dialects.mysql import BIGINT as BigInteger  # type: ignore
+from sqlalchemy import Table, Column, UniqueConstraint
+from sqlalchemy.exc import IntegrityError
+from sqlalchemy.types import String, Integer, JSON
+from sqlalchemy.dialects.mysql import BIGINT as BigInteger
 from typing import Optional, Dict, List, Tuple, Any
 
 from bemani.common import GameConstants, Time
@@ -75,17 +75,13 @@ music = Table(
     Column("artist", String(255)),
     Column("genre", String(255)),
     Column("data", JSON),
-    UniqueConstraint(
-        "songid", "chart", "game", "version", name="songid_chart_game_version"
-    ),
+    UniqueConstraint("songid", "chart", "game", "version", name="songid_chart_game_version"),
     mysql_charset="utf8mb4",
 )
 
 
 class MusicData(BaseData):
-    def __get_musicid(
-        self, game: GameConstants, version: int, songid: int, songchart: int
-    ) -> int:
+    def __get_musicid(self, game: GameConstants, version: int, songid: int, songchart: int) -> int:
         """
         Given a game/version/songid/chart, look up the unique music ID for this song.
 
@@ -110,10 +106,8 @@ class MusicData(BaseData):
         )
         if cursor.rowcount != 1:
             # music doesn't exist
-            raise Exception(
-                f"Song {songid} chart {songchart} doesn't exist for game {game} version {version}"
-            )
-        result = cursor.fetchone()
+            raise Exception(f"Song {songid} chart {songchart} doesn't exist for game {game} version {version}")
+        result = cursor.mappings().fetchone()  # type: ignore
         return result["id"]
 
     def put_score(
@@ -302,7 +296,7 @@ class MusicData(BaseData):
             # score doesn't exist
             return None
 
-        result = cursor.fetchone()
+        result = cursor.mappings().fetchone()  # type: ignore
         return Score(
             result["scorekey"],
             result["songid"],
@@ -315,9 +309,7 @@ class MusicData(BaseData):
             self.deserialize(result["data"]),
         )
 
-    def get_score_by_key(
-        self, game: GameConstants, version: int, key: int
-    ) -> Optional[Tuple[UserID, Score]]:
+    def get_score_by_key(self, game: GameConstants, version: int, key: int) -> Optional[Tuple[UserID, Score]]:
         """
         Look up previous high score by key.
 
@@ -364,7 +356,7 @@ class MusicData(BaseData):
             # score doesn't exist
             return None
 
-        result = cursor.fetchone()
+        result = cursor.mappings().fetchone()  # type: ignore
         return (
             UserID(result["userid"]),
             Score(
@@ -447,12 +439,10 @@ class MusicData(BaseData):
                 result["plays"],
                 self.deserialize(result["data"]),
             )
-            for result in cursor
+            for result in cursor.mappings()
         ]
 
-    def get_most_played(
-        self, game: GameConstants, version: int, userid: UserID, count: int
-    ) -> List[Tuple[int, int]]:
+    def get_most_played(self, game: GameConstants, version: int, userid: UserID, count: int) -> List[Tuple[int, int]]:
         """
         Look up a user's most played songs.
 
@@ -482,11 +472,9 @@ class MusicData(BaseData):
             {"userid": userid, "game": game.value, "version": version, "count": count},
         )
 
-        return [(result["songid"], result["plays"]) for result in cursor]
+        return [(result["songid"], result["plays"]) for result in cursor.mappings()]
 
-    def get_last_played(
-        self, game: GameConstants, version: int, userid: UserID, count: int
-    ) -> List[Tuple[int, int]]:
+    def get_last_played(self, game: GameConstants, version: int, userid: UserID, count: int) -> List[Tuple[int, int]]:
         """
         Look up a user's last played songs.
 
@@ -516,7 +504,7 @@ class MusicData(BaseData):
             {"userid": userid, "game": game.value, "version": version, "count": count},
         )
 
-        return [(result["songid"], result["timestamp"]) for result in cursor]
+        return [(result["songid"], result["timestamp"]) for result in cursor.mappings()]
 
     def get_hit_chart(
         self,
@@ -563,7 +551,7 @@ class MusicData(BaseData):
             },
         )
 
-        return [(result["songid"], result["plays"]) for result in cursor]
+        return [(result["songid"], result["plays"]) for result in cursor.mappings()]
 
     def get_song(
         self,
@@ -609,7 +597,7 @@ class MusicData(BaseData):
         if cursor.rowcount != 1:
             # music doesn't exist
             return None
-        result = cursor.fetchone()
+        result = cursor.mappings().fetchone()  # type: ignore
         return Song(
             game,
             version,
@@ -659,7 +647,7 @@ class MusicData(BaseData):
                 result["genre"],
                 self.deserialize(result["data"]),
             )
-            for result in cursor
+            for result in cursor.mappings()
         ]
 
     def get_all_scores(
@@ -684,11 +672,19 @@ class MusicData(BaseData):
         """
         # First, construct the queries for grabbing the songid/chart
         if version is not None:
-            songidquery = "SELECT songid FROM music WHERE music.id = score.musicid AND game = :game AND version = :version"
-            chartquery = "SELECT chart FROM music WHERE music.id = score.musicid AND game = :game AND version = :version"
+            songidquery = (
+                "SELECT songid FROM music WHERE music.id = score.musicid AND game = :game AND version = :version"
+            )
+            chartquery = (
+                "SELECT chart FROM music WHERE music.id = score.musicid AND game = :game AND version = :version"
+            )
         else:
-            songidquery = "SELECT songid FROM music WHERE music.id = score.musicid AND game = :game ORDER BY version DESC LIMIT 1"
-            chartquery = "SELECT chart FROM music WHERE music.id = score.musicid AND game = :game ORDER BY version DESC LIMIT 1"
+            songidquery = (
+                "SELECT songid FROM music WHERE music.id = score.musicid AND game = :game ORDER BY version DESC LIMIT 1"
+            )
+            chartquery = (
+                "SELECT chart FROM music WHERE music.id = score.musicid AND game = :game ORDER BY version DESC LIMIT 1"
+            )
 
         # Select statement for getting play count
         playselect = "SELECT COUNT(timestamp) FROM score_history WHERE score_history.musicid = score.musicid AND score_history.userid = score.userid"
@@ -756,7 +752,7 @@ class MusicData(BaseData):
                     self.deserialize(result["data"]),
                 ),
             )
-            for result in cursor
+            for result in cursor.mappings()
         ]
 
     def get_all_records(
@@ -784,14 +780,24 @@ class MusicData(BaseData):
         """
         # First, construct the queries for grabbing the songid/chart
         if version is not None:
-            songidquery = "SELECT songid FROM music WHERE music.id = score.musicid AND game = :game AND version = :version"
-            chartquery = "SELECT chart FROM music WHERE music.id = score.musicid AND game = :game AND version = :version"
+            songidquery = (
+                "SELECT songid FROM music WHERE music.id = score.musicid AND game = :game AND version = :version"
+            )
+            chartquery = (
+                "SELECT chart FROM music WHERE music.id = score.musicid AND game = :game AND version = :version"
+            )
         else:
-            songidquery = "SELECT songid FROM music WHERE music.id = score.musicid AND game = :game ORDER BY version DESC LIMIT 1"
-            chartquery = "SELECT chart FROM music WHERE music.id = score.musicid AND game = :game ORDER BY version DESC LIMIT 1"
+            songidquery = (
+                "SELECT songid FROM music WHERE music.id = score.musicid AND game = :game ORDER BY version DESC LIMIT 1"
+            )
+            chartquery = (
+                "SELECT chart FROM music WHERE music.id = score.musicid AND game = :game ORDER BY version DESC LIMIT 1"
+            )
 
         # Next, get a list of all songs that were played given the input criteria
-        musicid_sql = "SELECT DISTINCT(score.musicid) FROM score, music WHERE score.musicid = music.id AND music.game = :game"
+        musicid_sql = (
+            "SELECT DISTINCT(score.musicid) FROM score, music WHERE score.musicid = music.id AND music.game = :game"
+        )
         params: Dict[str, Any] = {"game": game.value}
         if version is not None:
             musicid_sql = musicid_sql + " AND music.version = :version"
@@ -857,12 +863,10 @@ class MusicData(BaseData):
                     self.deserialize(result["data"]),
                 ),
             )
-            for result in cursor
+            for result in cursor.mappings()
         ]
 
-    def get_attempt_by_key(
-        self, game: GameConstants, version: int, key: int
-    ) -> Optional[Tuple[UserID, Attempt]]:
+    def get_attempt_by_key(self, game: GameConstants, version: int, key: int) -> Optional[Tuple[UserID, Attempt]]:
         """
         Look up a previous attempt by key.
 
@@ -904,7 +908,7 @@ class MusicData(BaseData):
             # score doesn't exist
             return None
 
-        result = cursor.fetchone()
+        result = cursor.mappings().fetchone()  # type: ignore
         return (
             UserID(result["userid"]),
             Attempt(
@@ -943,7 +947,9 @@ class MusicData(BaseData):
         # First, construct the queries for grabbing the songid/chart
         if version is not None:
             songidquery = "SELECT songid FROM music WHERE music.id = score_history.musicid AND game = :game AND version = :version"
-            chartquery = "SELECT chart FROM music WHERE music.id = score_history.musicid AND game = :game AND version = :version"
+            chartquery = (
+                "SELECT chart FROM music WHERE music.id = score_history.musicid AND game = :game AND version = :version"
+            )
         else:
             songidquery = "SELECT songid FROM music WHERE music.id = score_history.musicid AND game = :game ORDER BY version DESC LIMIT 1"
             chartquery = "SELECT chart FROM music WHERE music.id = score_history.musicid AND game = :game ORDER BY version DESC LIMIT 1"
@@ -1013,5 +1019,5 @@ class MusicData(BaseData):
                     self.deserialize(result["data"]),
                 ),
             )
-            for result in cursor
+            for result in cursor.mappings()
         ]

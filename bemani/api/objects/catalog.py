@@ -7,6 +7,14 @@ from bemani.data import Song
 
 
 class CatalogObject(BaseObject):
+    def __format_danevo_song(self, song: Song) -> Dict[str, Any]:
+        return {
+            "level": song.data.get_int("level"),
+            "bpm_min": song.data.get_int("bpm_min"),
+            "bpm_max": song.data.get_int("bpm_max"),
+            "kcal": song.data.get_float("kcal"),
+        }
+
     def __format_ddr_song(self, song: Song) -> Dict[str, Any]:
         groove = song.data.get_dict("groove")
         return {
@@ -65,9 +73,7 @@ class CatalogObject(BaseObject):
         }
         return {
             "difficulty": song.data.get_int("difficulty"),
-            "category": categorymapping.get(
-                song.data.get_int("version", defaultcategory), "1"
-            ),
+            "category": categorymapping.get(song.data.get_int("version", defaultcategory), "1"),
             "bpm_min": song.data.get_int("bpm_min"),
             "bpm_max": song.data.get_int("bpm_max"),
         }
@@ -124,6 +130,8 @@ class CatalogObject(BaseObject):
             base.update(self.__format_reflec_song(song))
         if self.game == GameConstants.SDVX:
             base.update(self.__format_sdvx_song(song))
+        if self.game == GameConstants.DANCE_EVOLUTION:
+            base.update(self.__format_danevo_song(song))
 
         return base
 
@@ -228,9 +236,7 @@ class CatalogObject(BaseObject):
         else:
             return self.version
 
-    def fetch_v1(
-        self, idtype: APIConstants, ids: List[str], params: Dict[str, Any]
-    ) -> Dict[str, List[Dict[str, Any]]]:
+    def fetch_v1(self, idtype: APIConstants, ids: List[str], params: Dict[str, Any]) -> Dict[str, List[Dict[str, Any]]]:
         # Verify IDs
         if idtype != APIConstants.ID_TYPE_SERVER:
             raise APIException(
@@ -240,10 +246,7 @@ class CatalogObject(BaseObject):
 
         # Fetch the songs
         songs = self.data.local.music.get_all_songs(self.game, self.music_version)
-        if (
-            self.game == GameConstants.JUBEAT
-            and self.version == VersionConstants.JUBEAT_CLAN
-        ):
+        if self.game == GameConstants.JUBEAT and self.version == VersionConstants.JUBEAT_CLAN:
             # There's always a special case. We don't store all music IDs since those in
             # the range of 80000301-80000347 are actually the same song, but copy-pasted
             # for different prefectures and slightly different charts. So, we need to copy
@@ -265,6 +268,7 @@ class CatalogObject(BaseObject):
                             )
                         )
             songs.extend(additions)
+
         retval = {
             "songs": [self.__format_song(song) for song in songs],
         }

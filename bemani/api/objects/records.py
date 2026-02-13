@@ -7,6 +7,24 @@ from bemani.data import Score, UserID
 
 
 class RecordsObject(BaseObject):
+    def __format_danevo_record(self, record: Score) -> Dict[str, Any]:
+        grade = {
+            DBConstants.DANEVO_GRADE_AAA: "AAA",
+            DBConstants.DANEVO_GRADE_AA: "AA",
+            DBConstants.DANEVO_GRADE_A: "A",
+            DBConstants.DANEVO_GRADE_B: "B",
+            DBConstants.DANEVO_GRADE_C: "C",
+            DBConstants.DANEVO_GRADE_D: "D",
+            DBConstants.DANEVO_GRADE_E: "E",
+            DBConstants.DANEVO_GRADE_FAILED: "F",
+        }.get(record.data.get_int("grade"), "F")
+
+        return {
+            "grade": grade,
+            "combo": record.data.get_int("combo"),
+            "full_combo": record.data.get_bool("full_combo"),
+        }
+
     def __format_ddr_record(self, record: Score) -> Dict[str, Any]:
         halo = {
             DBConstants.DDR_HALO_NONE: "none",
@@ -217,6 +235,8 @@ class RecordsObject(BaseObject):
             base.update(self.__format_reflec_record(record))
         if self.game == GameConstants.SDVX:
             base.update(self.__format_sdvx_record(record))
+        if self.game == GameConstants.DANCE_EVOLUTION:
+            base.update(self.__format_danevo_record(record))
 
         return base
 
@@ -235,9 +255,7 @@ class RecordsObject(BaseObject):
         else:
             return self.version
 
-    def fetch_v1(
-        self, idtype: APIConstants, ids: List[str], params: Dict[str, Any]
-    ) -> List[Dict[str, Any]]:
+    def fetch_v1(self, idtype: APIConstants, ids: List[str], params: Dict[str, Any]) -> List[Dict[str, Any]]:
         since = params.get("since")
         until = params.get("until")
 
@@ -247,9 +265,7 @@ class RecordsObject(BaseObject):
             # Because of the way this query works, we can't apply since/until to it directly.
             # If we did, it would miss higher scores earned before since or after until, and
             # incorrectly report records.
-            records.extend(
-                self.data.local.music.get_all_records(self.game, self.music_version)
-            )
+            records.extend(self.data.local.music.get_all_records(self.game, self.music_version))
         elif idtype == APIConstants.ID_TYPE_SONG:
             if len(ids) == 1:
                 songid = int(ids[0])
@@ -273,9 +289,7 @@ class RecordsObject(BaseObject):
             cardid = ids[2]
             userid = self.data.local.user.from_cardid(cardid)
             if userid is not None:
-                score = self.data.local.music.get_score(
-                    self.game, self.music_version, userid, songid, chart
-                )
+                score = self.data.local.music.get_score(self.game, self.music_version, userid, songid, chart)
                 if score is not None:
                     records.append((userid, score))
         elif idtype == APIConstants.ID_TYPE_CARD:

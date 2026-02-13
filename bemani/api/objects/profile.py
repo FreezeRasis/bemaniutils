@@ -7,6 +7,11 @@ from bemani.data import UserID
 
 
 class ProfileObject(BaseObject):
+    def __format_danevo_profile(self, profile: Profile, exact: bool) -> Dict[str, Any]:
+        return {
+            "area": profile.get_str("area", "") if exact else "",
+        }
+
     def __format_ddr_profile(self, profile: Profile, exact: bool) -> Dict[str, Any]:
         return {
             "area": profile.get_int("area", -1) if exact else -1,
@@ -71,18 +76,16 @@ class ProfileObject(BaseObject):
             base.update(self.__format_reflec_profile(profile, exact))
         if self.game == GameConstants.SDVX:
             base.update(self.__format_sdvx_profile(profile, exact))
+        if self.game == GameConstants.DANCE_EVOLUTION:
+            base.update(self.__format_danevo_profile(profile, exact))
 
         return base
 
-    def fetch_v1(
-        self, idtype: APIConstants, ids: List[str], params: Dict[str, Any]
-    ) -> List[Dict[str, Any]]:
+    def fetch_v1(self, idtype: APIConstants, ids: List[str], params: Dict[str, Any]) -> List[Dict[str, Any]]:
         # Fetch the profiles
         profiles: List[Tuple[UserID, Profile]] = []
         if idtype == APIConstants.ID_TYPE_SERVER:
-            profiles.extend(
-                self.data.local.user.get_all_profiles(self.game, self.version)
-            )
+            profiles.extend(self.data.local.user.get_all_profiles(self.game, self.version))
         elif idtype == APIConstants.ID_TYPE_SONG:
             raise APIException(
                 "Unsupported ID for lookup!",
@@ -108,9 +111,7 @@ class ProfileObject(BaseObject):
                     # in the case that we returned scores for a user that doesn't have a
                     # profile on a particular version. We allow that on this network, so in
                     # order to not break remote networks, try our best to return any profile.
-                    profile = self.data.local.user.get_any_profile(
-                        self.game, self.version, userid
-                    )
+                    profile = self.data.local.user.get_any_profile(self.game, self.version, userid)
                     if profile is not None:
                         profiles.append((userid, profile))
         else:
